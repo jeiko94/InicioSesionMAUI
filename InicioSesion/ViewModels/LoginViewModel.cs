@@ -2,6 +2,8 @@
 //using AVFoundation;
 using System.Windows.Input;
 using System.Xml.Serialization;
+using InicioSesion.Helpers;
+using InicioSesion.Services;
 using InicioSesion.Views;
 
 namespace InicioSesion.ViewModels
@@ -10,6 +12,7 @@ namespace InicioSesion.ViewModels
     {
         private string username;
         private string password;
+        private readonly DatabaseService _databaseService;
 
         //Propiedades para el enlace de datos
         public string Username
@@ -44,6 +47,7 @@ namespace InicioSesion.ViewModels
 
         public LoginViewModel()
         {
+            _databaseService = new DatabaseService();
             LoginCommand = new Command(OnLogin);
             GoToSignUpCommand = new Command(OnGoToSignUp);
         }
@@ -56,7 +60,9 @@ namespace InicioSesion.ViewModels
                 return;
             }
 
-            if (SignUpViewModel.UserCredentials.ContainsKey(Username) && SignUpViewModel.UserCredentials[Username] == Passowrd)
+            var user = await _databaseService.GetUserAsync(Username);
+
+            if (user != null && PasswordHasher.VerifyPassword(Passowrd, user.PasswordHash))
             {
                 await Application.Current.MainPage.DisplayAlert("Exito", "Inicio de sesión exitoso", "OK");
 

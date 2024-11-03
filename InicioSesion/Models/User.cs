@@ -1,9 +1,17 @@
 ﻿
+using SQLite;
+
 namespace InicioSesion.Models
 {
     public class User
     {
+        [PrimaryKey, AutoIncrement]
+        public int Id { get; set; }
+
+        [Unique, NotNull]
         public string Username { get; set; }
-        public string Password { get; set; }
+
+        [NotNull]
+        public string PasswordHash { get; set; }
     }
 }

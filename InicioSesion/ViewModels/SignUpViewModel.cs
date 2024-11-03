@@ -1,6 +1,8 @@
 ﻿using System.Windows.Input;
 using Microsoft.Maui.Controls;
 using InicioSesion.Models;
+using InicioSesion.Services;
+using InicioSesion.Helpers;
 
 namespace InicioSesion.ViewModels
 {
@@ -8,6 +10,7 @@ namespace InicioSesion.ViewModels
     {
         private string username;
         private string password;
+        private readonly DatabaseService _databaseService;
 
         //Propiedades para el enlace de datos
         public string Username
@@ -42,28 +45,54 @@ namespace InicioSesion.ViewModels
 
         public SignUpViewModel()
         {
+            _databaseService = new DatabaseService();
             SignUpCommand = new Command(OnSingUp);
             GoToLoginCommand = new Command(OnGoToLogin);
         }
 
-        //Diccionario estatico para almacenar credenciales
-        public static Dictionary<string, string> UserCredentials { get; } = new Dictionary<string, string>();
 
         private async void OnSingUp()
         {
-            if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(password))
+            if(Username.Length < 4 || Username.Length > 20)
             {
-                await Application.Current.MainPage.DisplayAlert("Error", "Ingresa tus crdenciales", "OK");
+                await Application.Current.MainPage.DisplayAlert("Error", "El Usuario debe tener enttre 4 y 20 caracteres", "OK");
                 return;
             }
 
-            if (UserCredentials.ContainsKey(Username))
+            //Validar fortaleza de la contraseña
+            if (!IsPasswordStrong(Password))
+            {
+                await Application.Current.MainPage.DisplayAlert("Error", "La contraseña debe tener al menos 8 caracteres, incluyendo mayúsculas, minúsculas, numeros y simbolos", "OK");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(password))
+            {
+                await Application.Current.MainPage.DisplayAlert("Error", "Ingresa tus credenciales", "OK");
+                return;
+            }
+
+    
+            //Verigficar si el usuario ya existe
+            var existingUser = await _databaseService.GetUserAsync(Username);
+            if (existingUser != null)
             {
                 await Application.Current.MainPage.DisplayAlert("Error", "El usuario ya exite", "OK");
                 return;
             }
 
-            UserCredentials[Username] = Password;
+            //Hashear la contraseña
+            string passwordHash = PasswordHasher.HashPassword(Password);
+
+            //Crear el nuevo usuario
+            var user = new User
+            {
+                Username = username,
+                PasswordHash = passwordHash
+            };
+            
+            await _databaseService.SaveUserAsync(user);
+
             await Application.Current.MainPage.DisplayAlert("Exito", "Cuenta creada exitosamente", "OK");
 
             //Navega a la pagina de inicio de sesión
@@ -73,6 +102,28 @@ namespace InicioSesion.ViewModels
         private async void OnGoToLogin()
         {
             await Application.Current.MainPage.Navigation.PushAsync(new Views.LoginPage());
+        }
+
+        private bool IsPasswordStrong(string password)
+        {
+            if (password.Length < 8)
+                return false;
+
+            bool hasUpper = false, hasLower = false, hasDigit = false, hasSpecial = false;
+
+            foreach (char c in password)
+            {
+                if (char.IsUpper(c))
+                    hasUpper = true;
+                else if (char.IsLower(c))
+                    hasLower = true;
+                else if (char.IsDigit(c))
+                    hasDigit = true;
+                else if (!char.IsLetterOrDigit(c))
+                    hasSpecial = true;
+            }
+
+            return hasUpper && hasLower && hasDigit && hasSpecial;
         }
     }
 }
