@@ -1,4 +1,5 @@
-﻿namespace InicioSesion
+﻿using InicioSesion.Views;
+namespace InicioSesion
 {
     public partial class App : Application
     {
@@ -6,7 +7,7 @@
         {
             InitializeComponent();
 
-            MainPage = new NavigationPage(new SingUpPage());
+            MainPage = new NavigationPage(new SignUpPage());
         }
     }
 }
